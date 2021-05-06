@@ -62,17 +62,22 @@ const EditableText = props => {
   const [editingText, setEditingText] = useState(false)
   const [value, setValue] = useState('')
 
-  const enterPressed = useKeyPress("Enter")
+  // const enterPressed = useKeyPress("Enter")
 
-  useEffect(() => {
-    if (editingText && enterPressed) {
-      setEditingText(false)
-      props.onEdit && props.onEdit(value)
-    }
-  }, [enterPressed])
+  // useEffect(() => {
+  //   if (editingText && enterPressed) {
+  //     setEditingText(false)
+  //     props.onEdit && props.onEdit(value)
+  //   }
+  // }, [enterPressed])
 
   if (editingText) {
-    return <Textarea m={3} width='92%' height={props.height} maxWidth={props.maxWidth} autoFocus onChange={e => setValue(e.target.value)} value={value} onBlur={() => {
+    return <Textarea m={3} width='92%' height={props.height} maxWidth={props.maxWidth} autoFocus onChange={e => setValue(e.target.value)} value={value}
+    onFocus={(e) => {
+      e.target.selectionStart = e.target.value.length;
+      e.target.selectionEnd = e.target.value.length;
+    }}
+    onBlur={() => {
       setEditingText(false)
       props.onEdit && props.onEdit(value)
     }} />
@@ -118,8 +123,8 @@ const Step = (props) => (
       {props.title}
     </Heading></EditableText>
     {props.editing && <Flex justifyContent='center'> 
-        <Button variant='primary' ml={4}>{'<'}</Button>
-        <Button variant='primary' ml={2}>{'>'}</Button>
+        <Button variant='primary' ml={4} onClick={() => regressStep(props.flow, props.stepIndex, props.setFlow)} disabled={props.stepIndex === 0}>{'<'}</Button>
+        <Button variant='primary' ml={2} onClick={() => progressStep(props.flow, props.stepIndex, props.setFlow)} disabled={props.stepIndex === props.flow.steps.length - 1}>{'>'}</Button>
         <Button variant='warning' ml={2} onClick={() => {
           if (window.confirm('Are you sure?')) {
             deleteStep(props.flow, props.step, props.setFlow)
@@ -137,12 +142,12 @@ const Step = (props) => (
 const Flow = (props) => (
   <Flex flexDirection='column' m={2}>
     <Flex justifyContent='center'>
-      <EditableText><Heading as='h1' mb={4} mt={3} fontSize={6}>
+      <EditableText onEdit={v => editFlow(props.flow, { title: v }, props.setFlow)}><Heading as='h1' mb={4} mt={3} fontSize={6}>
         {props.flow.title}
       </Heading></EditableText>
     </Flex>
     <Flex justifyContent='center' mb={3}>
-      <Button variant='secondary' onClick={() => createTask(props.flow, props.setFlow)}>
+      <Button variant='secondary' onClick={() => props.flow.steps.length > 0 && createTask(props.flow, props.setFlow)}>
         Create Task
       </Button>
       <Button variant='secondary' ml={2} onClick={() => createStep(props.flow, props.setFlow)}>
@@ -152,12 +157,12 @@ const Flow = (props) => (
         Edit Flow
       </Button>
       <Button variant='outline' ml={2}>
-        View Metrics
+        View Metrics (to be done)
       </Button>
     </Flex>
     <Flex> 
       {props.flow.steps.map((step, stepIndex) => (
-        <Step editing={props.editing} {...step} flow={props.flow} setFlow={props.setFlow} key={step.id} step={step} >
+        <Step editing={props.editing} {...step} flow={props.flow} setFlow={props.setFlow} key={step.id} step={step} stepIndex={stepIndex} >
           {props.flow.tasks
             .filter(task => task.step === step.id)
             .slice().sort((a, b) => b.updatedAt - a.updatedAt)
@@ -243,6 +248,26 @@ const editTask = (flow, task, newTask, setFlow) => {
   })
 }
 
+const progressStep = (flow, stepIndex, setFlow) => {
+  let tmp = null
+  flow.steps.forEach((step, i) => {
+    if (i === stepIndex) {
+      tmp = flow.steps[i + 1]
+      setFlow({ ...flow, steps: flow.steps.map((el, ii) => ii === i ? tmp : el).map((el, ii) => ii === i + 1 ? step : el) })
+    }
+  })
+}
+
+const regressStep = (flow, stepIndex, setFlow) => {
+  let tmp = null
+  flow.steps.forEach((step, i) => {
+    if (i === stepIndex) {
+      tmp = flow.steps[i - 1]
+      setFlow({ ...flow, steps: flow.steps.map((el, ii) => ii === i ? tmp : el).map((el, ii) => ii === i - 1 ? step : el) })
+    }
+  })
+}
+
 const createStep= (flow, setFlow) => {
   setFlow({
     ...flow,
@@ -272,6 +297,13 @@ const editStep = (flow, step, newStep, setFlow) => {
       ? {...step, ...newStep, updatedAt: Date.now(), }
       : t
     ),
+  })
+}
+
+const editFlow = (flow, newFlow, setFlow) => {
+  setFlow({
+    ...flow,
+    ...newFlow,
   })
 }
 
