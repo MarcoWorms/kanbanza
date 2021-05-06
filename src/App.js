@@ -1,11 +1,14 @@
 /* eslint no-unused-vars: 0 */
 import React, { useState, useEffect, useRef } from 'react'
+import { v4 as uuid } from 'uuid'
 import preset from '@rebass/preset'
 import { ThemeProvider } from 'emotion-theming'
 // import { ThemeProvider } from 'rebass/styled-components'
 import { Box, Flex, Heading, Text, Button, Link, Image, Card } from 'rebass'
 import { Input, Textarea } from '@rebass/forms'
+import ReactMarkdown from "react-markdown";
 import './reset.css'
+import { without } from 'ramda'
 // OR use 'rebass/styled-components'
 
 const theme = {
@@ -20,7 +23,10 @@ const theme = {
       '&:hover': {
         backgroundColor: '#666',
         color: '#eee'
-      }
+      },
+      '&:disabled' : {
+        opacity: 0.2
+      },
     },
     secondary: {
       ...preset.buttons.secondary,
@@ -82,51 +88,46 @@ const Task = (props) => (
   <Card minWidth={400} maxWidth={400} m={2} p={2}>
     <Flex justifyContent='space-between' alignItems='flex-start'>
       {/* <Button variant='primary'>{'Delete'}</Button> */}
-      <EditableText maxWidth={260}><Heading as='h3' m={2} fontSize={3} className={'wrapHard'} maxWidth={270}>
-        A new task
+      <EditableText onEdit={v => editTask(props.flow, props.task, { title: v }, props.setFlow)} maxWidth={260}><Heading as='h3' m={2} fontSize={3} className={'wrapHard'} maxWidth={270}>
+        {props.title}
       </Heading></EditableText> 
       {props.editing
         ? <Button variant='warning' ml={2} onClick={() => {
           if (window.confirm('Are you sure?')) {
-            console.log('delete')
+            deleteTask(props.flow, props.task, props.setFlow)
           }
         }}>{'Delete'}</Button>
         : <Flex>
-        <Button variant='primary'>
+        <Button variant='primary' onClick={() => regressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === 0}>
           {'<'}
         </Button>
-        <Button variant='primary' ml={2}>
+        <Button variant='primary' ml={2} onClick={() => progressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === props.flow.steps.length - 1}> 
           {'>'}
         </Button>
       </Flex>}
     </Flex>
-    <EditableText height={200}><Text m={2} className='wrapHard'>
-      A new task *markdown powered* description. A new task *markdown powered*
-      description. A new task *markdown powered* description. A new task
-      *markdown powered* description. A new task *markdown powered* description.
-    </Text></EditableText>
-    <Flex justifyContent='flex-end'>
-      
-    </Flex>
+    <EditableText height={200} onEdit={v => editTask(props.flow, props.task, { description: v }, props.setFlow)}>
+      <ReactMarkdown children={props.description} />
+    </EditableText>
   </Card>
 )
 
-const Column = (props) => (
-  <Flex flexDirection={'column'} minWidth={400} m={2} className={'wrapHard'}>
-    <EditableText><Heading as='h2' m={1} mt={3} textAlign='center' fontSize={5}>
+const Step = (props) => (
+  <Flex flexDirection={'column'} minWidth={420} m={2} className={'wrapHard'}>
+    <EditableText onEdit={v => editStep(props.flow, props.step, { title: v }, props.setFlow)}><Heading as='h2' m={1} mt={3} mb={props.editing ? 2 : 4} textAlign='center' fontSize={5}>
       {props.title}
     </Heading></EditableText>
-    <Flex justifyContent='center' opacity={props.editing ? 1 : 0}> 
-      <Button variant='primary' ml={4}>{'<'}</Button>
-      <Button variant='primary' ml={2}>{'>'}</Button>
-      <Button variant='warning' ml={2} onClick={() => {
-        if (window.confirm('Are you sure?')) {
-          console.log('delete')
-        }
-      }}>
-        Delete
-      </Button>
-    </Flex>
+    {props.editing && <Flex justifyContent='center'> 
+        <Button variant='primary' ml={4}>{'<'}</Button>
+        <Button variant='primary' ml={2}>{'>'}</Button>
+        <Button variant='warning' ml={2} onClick={() => {
+          if (window.confirm('Are you sure?')) {
+            deleteStep(props.flow, props.step, props.setFlow)
+          }
+        }}>
+          Delete
+        </Button>
+      </Flex>}
     <Flex alignItems='center' flexDirection='column'>
       {props.children}
     </Flex>
@@ -137,13 +138,16 @@ const Flow = (props) => (
   <Flex flexDirection='column' m={2}>
     <Flex justifyContent='center'>
       <EditableText><Heading as='h1' mb={4} mt={3} fontSize={6}>
-        {props.title}
+        {props.flow.title}
       </Heading></EditableText>
     </Flex>
     <Flex justifyContent='center' mb={3}>
-      <Button variant='secondary'>
+      <Button variant='secondary' onClick={() => createTask(props.flow, props.setFlow)}>
         Create Task
-        </Button>
+      </Button>
+      <Button variant='secondary' ml={2} onClick={() => createStep(props.flow, props.setFlow)}>
+        Create Step
+      </Button>
       <Button variant='secondary' ml={2} onClick={() => props.setEditing(!props.editing)}>
         Edit Flow
       </Button>
@@ -152,47 +156,124 @@ const Flow = (props) => (
       </Button>
     </Flex>
     <Flex> 
-      <Column editing={props.editing} title='Todo'>
-        <Task editing={props.editing} />
-        <Task editing={props.editing} />
-        <Task editing={props.editing} />
-        <Task editing={props.editing} />
-      </Column>
-      <Column editing={props.editing} title='Doing'>
-        <Task editing={props.editing} />
-        <Task editing={props.editing} />
-      </Column>
-      <Column editing={props.editing} title='Done'>
-        <Task editing={props.editing} />
-      </Column>
+      {props.flow.steps.map((step, stepIndex) => (
+        <Step editing={props.editing} {...step} flow={props.flow} setFlow={props.setFlow} key={step.id} step={step} >
+          {props.flow.tasks
+            .filter(task => task.step === step.id)
+            .slice().sort((a, b) => b.updatedAt - a.updatedAt)
+            .map(task => (
+              <Task editing={props.editing} {...task} flow={props.flow} setFlow={props.setFlow} stepIndex={stepIndex} key={task.id} task={task} />
+            ))}
+        </Step>
+      ))}
     </Flex>
   </Flex>
 )
 
-const App = (props) => {
+const FlowContainer = (props) => {
 
   const [editing, setEditing] = useState(false)
-
-  // const ePressed = useKeyPress("e")
-  // const mPressed = useKeyPress("m")
-  // const cPressed = useKeyPress("c")
-
-  // useEffect(() => {
-  //   if (ePressed) {
-  //     setEditing(!editing)
-  //   }
-  // }, [ePressed])
+  const [flow, setFlow] = useStickyState({
+    title: 'Main Flow',
+    steps: [
+      { id: uuid(), createdAt: Date.now(), updatedAt: Date.now(), title: 'Todo' },
+      { id: uuid(), createdAt: Date.now(), updatedAt: Date.now(), title: 'Doing' },
+      { id: uuid(), createdAt: Date.now(), updatedAt: Date.now(), title: 'Done' },
+    ],
+    tasks: [],
+  })
 
   return(
     <ThemeProvider theme={theme}>
       <Box variant='styles.root' overflowX='auto'>
-        <Flow title={'Main Flow'} editing={editing} setEditing={setEditing} />
+        <Flow editing={editing} setEditing={setEditing} flow={flow} setFlow={setFlow} />
       </Box>
     </ThemeProvider>
   )
 }
 
-export default App
+export default FlowContainer
+
+const progressTask = (flow, task, setFlow) => {
+  flow.steps.forEach((step, i) => {
+    if (step.id === task.step) {
+      setFlow({ ...flow, tasks: flow.tasks.map(t => t.id === task.id ? {...task, step: flow.steps[i + 1].id, updatedAt: Date.now() } : t) })
+    }
+  })
+}
+
+const regressTask = (flow, task, setFlow) => {
+  flow.steps.forEach((step, i) => {
+    if (step.id === task.step) {
+      setFlow({ ...flow, tasks: flow.tasks.map(t => t.id === task.id ? {...task, step: flow.steps[i - 1].id, updatedAt: Date.now() } : t) })
+    }
+  })
+}
+
+const createTask = (flow, setFlow) => {
+  setFlow({
+    ...flow,
+    tasks: flow.tasks.concat({
+      id: uuid(),
+      title: 'A new task!',
+      description: 'a **markdown** *powered* description',
+      step: flow.steps[0].id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+    }),
+  })
+}
+
+const deleteTask = (flow, task, setFlow) => {
+  setFlow({
+    ...flow,
+    tasks: flow.tasks.map(t => t.id === task.id ? undefined : t).filter(v => v)
+  })
+}
+
+const editTask = (flow, task, newTask, setFlow) => {
+  setFlow({
+    ...flow,
+    tasks: flow.tasks.map(t =>
+      t.id === task.id
+      ? {...task, ...newTask, updatedAt: Date.now() }
+      : t
+    ),
+  })
+}
+
+const createStep= (flow, setFlow) => {
+  setFlow({
+    ...flow,
+    steps: flow.steps.concat({
+      id: uuid(),
+      title: 'New Step',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+    }),
+  })
+}
+
+const deleteStep= (flow, step, setFlow) => {
+  setFlow({
+    ...flow,
+    steps: flow.steps.map(t => t.id === step.id ? undefined : t).filter(v => v),
+    tasks: flow.tasks.map(t => t.step === step.id ? undefined : t).filter(v => v)
+  })
+}
+
+const editStep = (flow, step, newStep, setFlow) => {
+  setFlow({
+    ...flow,
+    steps: flow.steps.map(t =>
+      t.id === step.id
+      ? {...step, ...newStep, updatedAt: Date.now(), }
+      : t
+    ),
+  })
+}
 
 function useKeyPress(targetKey) {
   // State for keeping track of whether key is pressed
@@ -220,4 +301,17 @@ function useKeyPress(targetKey) {
     }
   }, []) // Empty array ensures that effect is only run on mount and unmount
   return keyPressed
+}
+
+function useStickyState(defaultValue, key) {
+  const [value, setValue] = React.useState(() => {
+    const stickyValue = window.localStorage.getItem(key);
+    return stickyValue !== null
+      ? JSON.parse(stickyValue)
+      : defaultValue;
+  });
+  React.useEffect(() => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+  return [value, setValue];
 }
