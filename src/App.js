@@ -32,17 +32,17 @@ const theme = {
       ...preset.buttons.secondary,
       cursor: 'pointer',
       '&:hover': {
-        backgroundColor: 'blue'
-      }
+        backgroundColor: 'blue',
+      },
     },
     warning: {
-      color: '#222',
-      backgroundColor: 'rgb(255, 150, 150)',
+      color: 'black',
+      backgroundColor: 'rgb(255, 200, 200)',
       cursor: 'pointer',
       '&:hover': {
         backgroundColor: 'red',
-        color: 'black'
-      }
+        color: 'black',
+      },
     },
     outline: {
       ...preset.buttons.outline,
@@ -83,42 +83,43 @@ const EditableText = props => {
     }} />
   }
 
-  return <Box onClick={() => {
+  return <Box 
+    onClick={() => {
     setValue(props.children.props.children)
     setEditingText(true)
   }}>{props.children}</Box>
 }
 
 const Task = (props) => (
-  <Card minWidth={400} maxWidth={400} m={2} p={2}>
+  <Box minWidth={500} maxWidth={500} m={2} p={2} backgroundColor='#fbfbfb' sx={{ borderRadius: 4 }}>
+
+    <Box m={3} mb={5} overflow='hidden'>
+      <EditableText height={300} onEdit={v => editTask(props.flow, props.task, { description: v }, props.setFlow)}>
+        <ReactMarkdown children={props.description} />
+      </EditableText>
+    </Box>
+
     <Flex justifyContent='space-between' alignItems='flex-start'>
-      {/* <Button variant='primary'>{'Delete'}</Button> */}
-      <EditableText onEdit={v => editTask(props.flow, props.task, { title: v }, props.setFlow)} maxWidth={260}><Heading as='h3' m={2} fontSize={3} className={'wrapHard'} maxWidth={270}>
+      {/* <EditableText onEdit={v => editTask(props.flow, props.task, { title: v }, props.setFlow)} maxWidth={260}><Heading as='h3' m={2} fontSize={3} className={'wrapHard'} maxWidth={270}>
         {props.title}
-      </Heading></EditableText> 
-      {props.editing
-        ? <Button variant='warning' ml={2} onClick={() => {
+      </Heading></EditableText>  */}
+        <Button variant='primary' onClick={() => regressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === 0}>
+          {'<'}
+        </Button>
+        <Button variant='warning' ml={2} onClick={() => {
           if (window.confirm('Are you sure?')) {
             deleteTask(props.flow, props.task, props.setFlow)
           }
         }}>{'Delete'}</Button>
-        : <Flex>
-        <Button variant='primary' onClick={() => regressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === 0}>
-          {'<'}
-        </Button>
         <Button variant='primary' ml={2} onClick={() => progressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === props.flow.steps.length - 1}> 
           {'>'}
         </Button>
-      </Flex>}
     </Flex>
-    <EditableText height={200} onEdit={v => editTask(props.flow, props.task, { description: v }, props.setFlow)}>
-      <ReactMarkdown children={props.description} />
-    </EditableText>
-  </Card>
+  </Box>
 )
 
 const Step = (props) => (
-  <Flex flexDirection={'column'} minWidth={420} m={2} className={'wrapHard'}>
+  <Flex flexDirection={'column'} minWidth={520} m={2} className={'wrapHard'}>
     <EditableText onEdit={v => editStep(props.flow, props.step, { title: v }, props.setFlow)}><Heading as='h2' m={1} mt={3} mb={props.editing ? 2 : 4} textAlign='center' fontSize={5}>
       {props.title}
     </Heading></EditableText>
@@ -220,8 +221,12 @@ const createTask = (flow, setFlow) => {
     ...flow,
     tasks: flow.tasks.concat({
       id: uuid(),
-      title: 'A new task!',
-      description: 'a **markdown** *powered* description',
+      // title: 'A new task!',
+      description: `# a new task!
+      
+with a [markdown](https://guides.github.com/features/mastering-markdown/) **powered** *description*
+
+![img](https://i.pinimg.com/474x/37/1c/d0/371cd0fe379985358692fcf940da0dac.jpg)`,
       step: flow.steps[0].id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
