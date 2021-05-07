@@ -79,7 +79,7 @@ const EditableText = props => {
     }}
     onBlur={() => {
       setEditingText(false)
-      props.onEdit && props.onEdit(value)
+      props.onEdit && props.onEdit(value || '--')
     }} />
   }
 
@@ -93,28 +93,37 @@ const EditableText = props => {
 const Task = (props) => (
   <Box minWidth={500} maxWidth={500} m={2} p={2} backgroundColor='#fbfbfb' sx={{ borderRadius: 4 }}>
 
-    <Box m={3} mb={5} overflow='hidden'>
-      <EditableText height={300} onEdit={v => editTask(props.flow, props.task, { description: v }, props.setFlow)}>
-        <ReactMarkdown children={props.description} />
-      </EditableText>
-    </Box>
-
-    <Flex justifyContent='space-between' alignItems='flex-start'>
+    <Flex justifyContent='center' alignItems='flex-start'>
       {/* <EditableText onEdit={v => editTask(props.flow, props.task, { title: v }, props.setFlow)} maxWidth={260}><Heading as='h3' m={2} fontSize={3} className={'wrapHard'} maxWidth={270}>
         {props.title}
       </Heading></EditableText>  */}
-        <Button variant='primary' onClick={() => regressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === 0}>
-          {'<'}
-        </Button>
-        <Button variant='warning' ml={2} onClick={() => {
-          if (window.confirm('Are you sure?')) {
-            deleteTask(props.flow, props.task, props.setFlow)
-          }
-        }}>{'Delete'}</Button>
-        <Button variant='primary' ml={2} onClick={() => progressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === props.flow.steps.length - 1}> 
-          {'>'}
-        </Button>
+        <Box ml={3} mr={3} overflow='hidden' fontSize='14px' minWidth={360}>
+          <EditableText height={300} onEdit={v => editTask(props.flow, props.task, { description: v }, props.setFlow)}>
+            <ReactMarkdown children={props.description} />
+          </EditableText>
+        </Box>
+
+        <Flex flexDirection='column' minWidth={90} maxWidth={90} alignItems='center'>
+          <Flex>
+            <Button variant='primary' onClick={() => regressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === 0}>
+              {'<'}
+            </Button>
+            <Button variant='primary' ml={2} onClick={() => progressTask(props.flow, props.task, props.setFlow)} disabled={props.stepIndex === props.flow.steps.length - 1}> 
+              {'>'}
+            </Button>
+          </Flex>
+          {props.editing && <Flex>
+            <Button variant='warning' mt={2} onClick={() => {
+              if (window.confirm('Are you sure?')) {
+                deleteTask(props.flow, props.task, props.setFlow)
+              }
+            }}>{'Delete'}</Button>
+          </Flex>}
+        </Flex>
+
     </Flex>
+
+
   </Box>
 )
 
@@ -141,32 +150,34 @@ const Step = (props) => (
 )
 
 const Flow = (props) => (
-  <Flex flexDirection='column' m={2}>
-    <Flex justifyContent='center'>
-      <EditableText onEdit={v => editFlow(props.flow, { title: v }, props.setFlow)}><Heading as='h1' mb={4} mt={3} fontSize={6}>
-        {props.flow.title}
-      </Heading></EditableText>
-    </Flex>
-    <Flex justifyContent='center' mb={3}>
-      <Button variant='secondary' onClick={() => props.flow.steps.length > 0 && createTask(props.flow, props.setFlow)}>
-        Create Task
-      </Button>
-      <Button variant='secondary' ml={2} onClick={() => createStep(props.flow, props.setFlow)}>
-        Create Step
-      </Button>
-      <Button variant='secondary' ml={2} onClick={() => props.setEditing(!props.editing)}>
-        Edit Flow
-      </Button>
-      <Button variant='outline' ml={2}>
-        View Metrics (to be done)
-      </Button>
+  <Flex>
+    <Flex flexDirection='column' minWidth={300} maxWidth={300} backgroundColor='#fbfbfb' p={2} height='100vh'>
+      <Flex justifyContent='center'>
+        <EditableText onEdit={v => editFlow(props.flow, { title: v }, props.setFlow)}><Heading as='h1' mb={4} mt={3} fontSize={6} className='wrapHard'>
+          {props.flow.title}
+        </Heading></EditableText>
+      </Flex>
+      <Flex justifyContent='center'  flexDirection='column'>
+        <Button mb={2} variant='secondary' onClick={() => props.flow.steps.length > 0 && createTask(props.flow, props.setFlow)}>
+          Create Task
+        </Button>
+        <Button mb={2} variant='secondary' onClick={() => createStep(props.flow, props.setFlow)}>
+          Create Step
+        </Button>
+        <Button mb={2} variant='secondary' onClick={() => props.setEditing(!props.editing)}>
+          Edit Flow
+        </Button>
+        <Button variant='outline'>
+          View Metrics (to be done)
+        </Button>
+      </Flex>
     </Flex>
     <Flex> 
       {props.flow.steps.map((step, stepIndex) => (
         <Step editing={props.editing} {...step} flow={props.flow} setFlow={props.setFlow} key={step.id} step={step} stepIndex={stepIndex} >
           {props.flow.tasks
             .filter(task => task.step === step.id)
-            .slice().sort((a, b) => b.updatedAt - a.updatedAt)
+            .slice().sort((a, b) => b.createdAt - a.createdAt)
             .map(task => (
               <Task editing={props.editing} {...task} flow={props.flow} setFlow={props.setFlow} stepIndex={stepIndex} key={task.id} task={task} />
             ))}
